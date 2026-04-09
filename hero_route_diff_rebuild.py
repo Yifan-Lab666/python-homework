@@ -20,14 +20,17 @@ logging.basicConfig(
 )
 
 # ==================== 配置区 ====================
-# 数据库连接配置（从 sql账号密码.txt 读取）
-DB_CONFIG_FILE = r"C:\Users\Admin\Desktop\sql账号密码.txt"
+# 数据库连接配置（从环境变量读取）
+DB_HOST = os.environ.get('DB_HOST', 'presto.infra.bi.moontontech.net')
+DB_PORT = int(os.environ.get('DB_PORT', '80'))
+DB_USERNAME = os.environ.get('DB_USERNAME', 'default_user')
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
 
 # 英雄配置 CSV 文件路径
-CONFIG_CSV_PATH = r"E:\P4ml_trunk\yifanzhu_3896\Assets\Document\hero.csv"
+CONFIG_CSV_PATH = os.environ.get('CONFIG_CSV_PATH', 'hero.csv')
 
 # 数据查询日期
-DATE = "2026-03-25"
+DATE = os.environ.get('DATE', '2026-03-25')
 
 # SQL 查询模板
 SQL_TEMPLATE = r"""
@@ -91,31 +94,14 @@ LIMIT 50000
 
 def read_sql_connection_string():
     """
-    从配置文件读取数据库连接信息
+    从环境变量读取数据库连接信息
     返回包含 host, port, user, password 的字典
     """
-    with open(DB_CONFIG_FILE, 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    host = re.search(r"DB_HOST\s*=\s*['\"]([^'\"]+)['\"]", content)
-    port = re.search(r"DB_PORT\s*=\s*(\d+)", content)
-    user_pass = re.search(r"DB_USERNAME\s*=\s*['\"]([^'\"]+)['\"]", content)
-    
-    if not host or not port or not user_pass:
-        raise Exception("无法从 sql账号密码.txt 解析数据库连接信息")
-    
-    user_pass_str = user_pass.group(1)
-    if ":" in user_pass_str:
-        user, password = user_pass_str.rsplit(":", 1)
-    else:
-        user = user_pass_str
-        password = ""
-    
     return {
-        "host": host.group(1),
-        "port": int(port.group(1)),
-        "user": user,
-        "password": password
+        "host": DB_HOST,
+        "port": DB_PORT,
+        "user": DB_USERNAME,
+        "password": DB_PASSWORD
     }
 
 
@@ -161,11 +147,10 @@ def read_online_data(sql):
     返回包含分路占比的 DataFrame
     """
     try:
-        user = b'eWlmYW56aHVAbW9vbnRvbi5jb206ZjNlZTY4MzNkYzY2MjY2ZTc1YzlkNDJlYzNlNTE2MjM0NjgwOGQ5YQ'
         conn = presto.connect(
-            host='presto.infra.bi.moontontech.net',
-            port=80,
-            username=user
+            host=DB_HOST,
+            port=DB_PORT,
+            username=DB_USERNAME
         )
         df = pd.read_sql(sql, conn, coerce_float=False)
         conn.close()
